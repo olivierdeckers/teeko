@@ -37,7 +37,7 @@ object FrontendRouter {
        |<html>
        |<head>
        |  <meta charset="UTF-8">
-       |  <title>Ze Awesome App</title>
+       |  <title>Teeko</title>
        |  <link rel="shortcut icon" type="image/png" href="$assetsDir/images/favicon.png"/>
        |</head>
        |<body>

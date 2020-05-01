@@ -1,6 +1,5 @@
 package be.dyadics.teeko
 
-import be.dyadics.teeko.model.{Move, PlacePiece, Position}
 import cats.effect._
 import fs2.concurrent.Queue
 import munit.FunSuite

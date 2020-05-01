@@ -7,9 +7,16 @@ ThisBuild / organizationName := "Dyadics"
 
 val http4sVersion = "0.21.2"
 
+val testDependencies = Seq(
+  "org.scalameta" %% "munit" % "0.4.3" % Test,
+  "org.scalameta" %% "munit-scalacheck" % "0.7.3" % Test,
+  "org.scalacheck" %% "scalacheck" % "1.14.1" % Test,
+)
+
 val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
-  addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
+  addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1"),
+  testFrameworks += new TestFramework("munit.Framework")
 )
 
 lazy val root = (project in file("."))
@@ -18,13 +25,12 @@ lazy val root = (project in file("."))
     scalacOptions ++= Seq(
       "-Xfatal-warnings"
     ),
-    testFrameworks += new TestFramework("munit.Framework")
   )
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .settings(commonSettings :_*)
-  .settings(
-    libraryDependencies ++= Seq()
+  .jvmSettings(
+    libraryDependencies ++= Seq() ++ testDependencies
   )
 
 lazy val backend = project
@@ -41,10 +47,7 @@ lazy val backend = project
       "org.http4s" %% "http4s-blaze-server" % http4sVersion,
       "io.circe" %% "circe-generic" % "0.13.0",
       "com.github.pureconfig" %% "pureconfig" % "0.12.1",
-      "org.scalameta" %% "munit" % "0.4.3" % Test,
-      "org.scalameta" %% "munit-scalacheck" % "0.7.3" % Test,
-      "org.scalacheck" %% "scalacheck" % "1.14.1" % Test,
-    )
+    ) ++ testDependencies
   )
   .settings(
     /*
@@ -79,8 +82,12 @@ lazy val frontend = project
   .dependsOn(shared.js)
   .settings(commonSettings:_*)
   .settings(
+    resolvers += "jitpack" at "https://jitpack.io",
     libraryDependencies ++= Seq(
-      "io.github.outwatch" %%% "outwatch"  % "1.0.0-RC2",
+//      "io.github.outwatch" %%% "outwatch"  % "1.0.0-RC2",
+      "com.github.outwatch.outwatch" %%% "outwatch" % "9b68603",
+      "com.github.outwatch.outwatch" %%% "outwatch-util" % "9b68603",
+
     ),
 //    Compile / npmDependencies += "bulma" -> "0.7.5"
   )
