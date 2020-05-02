@@ -45,8 +45,11 @@ lazy val backend = project
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC13",
       "org.http4s" %% "http4s-dsl" % http4sVersion,
       "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+      "io.circe" %% "circe-core" % "0.13.0",
       "io.circe" %% "circe-generic" % "0.13.0",
+      "io.circe" %% "circe-parser" % "0.13.0",
       "com.github.pureconfig" %% "pureconfig" % "0.12.1",
+      "ch.qos.logback"        % "logback-classic"   % "1.2.3",
     ) ++ testDependencies
   )
   .settings(
@@ -87,7 +90,9 @@ lazy val frontend = project
 //      "io.github.outwatch" %%% "outwatch"  % "1.0.0-RC2",
       "com.github.outwatch.outwatch" %%% "outwatch" % "9b68603",
       "com.github.outwatch.outwatch" %%% "outwatch-util" % "9b68603",
-
+      "io.circe" %%% "circe-core" % "0.13.0",
+      "io.circe" %%% "circe-generic" % "0.13.0",
+      "io.circe" %%% "circe-parser" % "0.13.0",
     ),
 //    Compile / npmDependencies += "bulma" -> "0.7.5"
   )

@@ -6,13 +6,6 @@ import org.http4s.headers.`Content-Type`
 import org.http4s.{Charset, Headers, HttpRoutes, MediaType}
 import zio.{RIO, Runtime}
 
-sealed trait Env extends Product with Serializable
-object Env {
-  final case class Prod(subenv: String) extends Env
-  case object Dev extends Env
-  case object Test extends Env
-}
-
 object FrontendRouter {
 
   private final val assetsDir = "assets"
@@ -68,7 +61,7 @@ final class FrontendRouter[R](env: Env)(implicit blocker: Blocker, runtime: Runt
 
   val routes: HttpRoutes[Task] =
     HttpRoutes.of[Task] {
-      case req @ GET -> Root / FrontendRouter.assetsDir / _ =>
+      case req @ GET -> FrontendRouter.assetsDir /: _ =>
         resources.run(req).getOrElseF(notFound)
       case GET -> Root => Ok(html(env)).map(_.withHeaders(indexHeaders))
     }

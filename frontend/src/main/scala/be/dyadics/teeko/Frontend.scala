@@ -1,10 +1,16 @@
 package be.dyadics.teeko
 
-import be.dyadics.teeko.model.{Board, Cell, Position}
+import be.dyadics.teeko.model.{Board, Cell, Move, PlacePiece, Position}
 import cats.effect.IO
+import colibri.{Observable, Observer}
+import colibri.Observable._
+import org.scalajs.dom.window
 import outwatch._
 import outwatch.dsl._
 import outwatch.reactive.handler._
+import outwatch.util.WebSocket
+import io.circe.generic.auto._
+import io.circe.syntax._
 
 object Frontend {
 
@@ -48,19 +54,20 @@ object Frontend {
       } else if (cell == Cell.Black) {
         blackChip
       } else {
-        dot
+        redChip
       }
     }
   }
 
-  def renderBoard(board: Handler[Board]): VNode = {
+  def renderBoard(board: Handler[Board], commandsObserver: Observer[String]): VNode = {
     table(
       for (row <- 0 to 4) yield {
         tr(
           for (col <- 0 to 4) yield {
             td(
               padding := "5px",
-              onClick(board.map(b => b.withCell(Position(row, col), Cell.Red))) --> board,
+//              onClick(board.map(b => b.withCell(Position(row, col), Cell.Red))) --> board,
+              onClick(Observable(PlacePiece(Position(row, col)).asInstanceOf[Move].asJson.noSpaces)) --> commandsObserver,
               board.map(b => b.cell(Position(row, col)))
             )
           }
@@ -71,9 +78,13 @@ object Frontend {
 
   def main(args: Array[String]): Unit = {
 
+    val webSocket = WebSocket(s"ws://${window.location.host}/rooms/room1")
+    webSocket.observable.map { e => println(e.data) }.subscribe(Observer.empty)
+
     val app = for {
+      commandsObserver <- webSocket.observer
       boardHandler <- Handler.create(Board.empty).toIO
-      result <- OutWatch.renderInto[IO]("#app", renderBoard(boardHandler))
+      result <- OutWatch.renderInto[IO]("#app", renderBoard(boardHandler, commandsObserver))
     } yield result
 
     app.unsafeRunSync()

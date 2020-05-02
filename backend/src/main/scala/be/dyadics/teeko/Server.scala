@@ -59,10 +59,10 @@ object Main extends App {
     )(
       implicit blocker: Blocker,
       runtime: Runtime[AppEnvironment]
-    ): HttpApp[AppTask] =
-    (
-      new FrontendRouter[AppEnvironment](env).routes
-    ).orNotFound
+    ): AppTask[HttpApp[AppTask]] =
+    new WebsocketRouter[AppEnvironment]().routes.map(websocketRoutes => {
+      (new FrontendRouter[AppEnvironment](env).routes <+> websocketRoutes).orNotFound
+    })
 
   private def server: ZIO[AppEnvironment, Throwable, Unit] =
     for {
@@ -71,9 +71,10 @@ object Main extends App {
       _ <- console.putStrLn(s"========= App ENV: $env ===========")
       implicit0(runtime: Runtime[AppEnvironment]) <- ZIO.runtime[ZEnv]
       implicit0(blocker: Blocker) <- blocker
+      routes <- app(env)
       server <- BlazeServerBuilder[AppTask]
         .bindHttp(8080, "0.0.0.0")
-        .withHttpApp(app(env))
+        .withHttpApp(routes)
         .serve
         .compile[AppTask, AppTask, ExitCode]
         .drain
@@ -89,15 +90,7 @@ object Main extends App {
 
 //object Server extends IOApp {
 //
-//  val websocketRoute = HttpRoutes.of[IO] {
-//    case GET -> Root / "ws" =>
-//      val toClient = Stream.awakeEvery[IO](1.seconds).map(_ => Text("Ping!"))
-//      val fromClient: Pipe[IO, WebSocketFrame, Unit] = _.evalMap {
-//        case Text(t, _) => IO.delay(println(t))
-//        case f => IO.delay(println("unknown type $f"))
-//      }
-//      WebSocketBuilder[IO].build(toClient, fromClient)
-//  }
+//
 //
 //  def run(args: List[String]): IO[ExitCode] = {
 //    implicit val runtime: Runtime[zio.ZEnv] = ZIO.runtime[zio.ZEnv]
