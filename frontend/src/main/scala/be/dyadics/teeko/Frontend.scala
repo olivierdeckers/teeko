@@ -60,26 +60,55 @@ object Frontend {
     }
   }
 
+  def clickHandler(
+      gameState: GameState,
+      selectedPosition: Option[Position],
+      pos: Position
+    ): Option[Move] = {
+    gameState match {
+      case _: PlacingGameState =>
+        Some(PlacePiece(pos))
+      case _: MovingGameState =>
+        selectedPosition.map(from => MovePiece(from, pos))
+    }
+  }
+
   def renderBoard(
-      board: Handler[Board],
+      selectedPosition: Handler[Option[Position]],
       gameState: Observable[GameState],
       commandsObserver: Observer[String]
     ): VNode = {
-    board.toString
     table(
       width := "100%",
       for (row <- 0 to 4)
         yield {
           tr(
             for (col <- 0 to 4) yield {
+              val position = Position(row, col)
               td(
                 padding := "5px",
-//              onClick(board.map(b => b.withCell(Position(row, col), Cell.Red))) --> board,
+                selectedPosition.map(s => opacity := (if (s.contains(position)) 0.8 else 1d)),
                 onClick(
-                  Observable(PlacePiece(Position(row, col)).asInstanceOf[Move].asJson.noSpaces)
+                  gameState
+                    .filter(_.board.cell(position) == Cell.Empty)
+                    .combineLatest(selectedPosition)
+                    .map {
+                      case (gs, sp) => clickHandler(gs, sp, position)
+                    }
+                    .collect {
+                      case Some(value) => value.asJson.noSpaces
+                    }
                 ) --> commandsObserver,
-                gameState
-                  .map(_.board.cell(Position(row, col)))
+                onClick(
+                  gameState
+                    .filter(_.board.cell(position) != Cell.Empty)
+                    .combineLatest(selectedPosition)
+                    .map {
+                      case (_, Some(p)) if p == position => None
+                      case _ => Some(position)
+                    }
+                ) --> selectedPosition,
+                gameState.map(_.board.cell(position))
               )
             }
           )
@@ -102,9 +131,9 @@ object Frontend {
 
     val app = for {
       commandsObserver <- webSocket.observer
-      boardHandler <- Handler.create(Board.empty).toIO
+      selectedPosition <- Handler.create(Option.empty[Position]).toIO
       result <- OutWatch
-        .renderInto[IO]("#app", renderBoard(boardHandler, gameState, commandsObserver))
+        .renderInto[IO]("#app", renderBoard(selectedPosition, gameState, commandsObserver))
     } yield result
 
     app.unsafeRunSync()

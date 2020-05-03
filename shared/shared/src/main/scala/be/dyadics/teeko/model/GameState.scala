@@ -18,8 +18,9 @@ sealed trait GameState {
 case class PlacingGameState(turn: Player, board: Board) extends GameState {
   def move(player: Player, pos: Position): Either[InvalidMove, GameState] =
     canMoveTo(player, pos).map { _ =>
-      val nextState = if (board.containsAllStones) MovingGameState else PlacingGameState
-      nextState(Player.otherPlayer(player), board.withCell(pos, player.cell))
+      val updatedBoard = board.withCell(pos, player.cell)
+      val nextState = if (updatedBoard.containsAllStones) MovingGameState else PlacingGameState
+      nextState(Player.otherPlayer(player), updatedBoard)
     }
 }
 
