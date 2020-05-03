@@ -16,9 +16,6 @@ import zio._
 import zio.clock.Clock
 import zio.stm._
 
-/**
-  * Copyright (C) 02/05/2020 - REstore NV
-  */
 class WebsocketRouter[R <: Clock] {
   import zio.interop.catz._
   type Task[A] = RIO[R, A]

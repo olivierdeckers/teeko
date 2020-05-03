@@ -1,16 +1,17 @@
 package be.dyadics.teeko
 
-import be.dyadics.teeko.model.{Board, Cell, Move, PlacePiece, Position}
+import be.dyadics.teeko.model._
 import cats.effect.IO
-import colibri.{Observable, Observer}
 import colibri.Observable._
+import colibri.{Observable, Observer}
+import io.circe.generic.auto._
+import io.circe.parser._
+import io.circe.syntax._
 import org.scalajs.dom.window
 import outwatch._
 import outwatch.dsl._
 import outwatch.reactive.handler._
 import outwatch.util.WebSocket
-import io.circe.generic.auto._
-import io.circe.syntax._
 
 object Frontend {
 
@@ -19,7 +20,7 @@ object Frontend {
 
     def chip(borderColor: String, centerColor: String): VNode = {
       svg(
-        attr("viewBox") := "0 0 32 32",
+        viewBox := "0 0 32 32",
         g(
           attr("fill") := borderColor,
           path(
@@ -54,37 +55,56 @@ object Frontend {
       } else if (cell == Cell.Black) {
         blackChip
       } else {
-        redChip
+        dot
       }
     }
   }
 
-  def renderBoard(board: Handler[Board], commandsObserver: Observer[String]): VNode = {
+  def renderBoard(
+      board: Handler[Board],
+      gameState: Observable[GameState],
+      commandsObserver: Observer[String]
+    ): VNode = {
+    board.toString
     table(
-      for (row <- 0 to 4) yield {
-        tr(
-          for (col <- 0 to 4) yield {
-            td(
-              padding := "5px",
+      width := "100%",
+      for (row <- 0 to 4)
+        yield {
+          tr(
+            for (col <- 0 to 4) yield {
+              td(
+                padding := "5px",
 //              onClick(board.map(b => b.withCell(Position(row, col), Cell.Red))) --> board,
-              onClick(Observable(PlacePiece(Position(row, col)).asInstanceOf[Move].asJson.noSpaces)) --> commandsObserver,
-              board.map(b => b.cell(Position(row, col)))
-            )
-          }
-        )
-      }
+                onClick(
+                  Observable(PlacePiece(Position(row, col)).asInstanceOf[Move].asJson.noSpaces)
+                ) --> commandsObserver,
+                gameState
+                  .map(_.board.cell(Position(row, col)))
+              )
+            }
+          )
+        }
     )
   }
 
   def main(args: Array[String]): Unit = {
 
     val webSocket = WebSocket(s"ws://${window.location.host}/rooms/room1")
-    webSocket.observable.map { e => println(e.data) }.subscribe(Observer.empty)
+
+    val gameState = webSocket.observable
+      .doOnNext { e => println(e.data) }
+      .map(_.data)
+      .map(x => decode[GameState](x.asInstanceOf[String]))
+      .filter(_.isRight)
+      .map(_.right.get)
+      .publish
+      .refCount
 
     val app = for {
       commandsObserver <- webSocket.observer
       boardHandler <- Handler.create(Board.empty).toIO
-      result <- OutWatch.renderInto[IO]("#app", renderBoard(boardHandler, commandsObserver))
+      result <- OutWatch
+        .renderInto[IO]("#app", renderBoard(boardHandler, gameState, commandsObserver))
     } yield result
 
     app.unsafeRunSync()

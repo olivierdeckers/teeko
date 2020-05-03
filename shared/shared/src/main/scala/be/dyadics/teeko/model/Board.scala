@@ -23,7 +23,7 @@ case class Board(private val cells: Array[Cell]) {
     )
 
   override def toString: String =
-    s"Board(isTerminal=${isTerminal}, stones=${cells.count(_ != Cell.Empty)}, cells=${cells})"
+    s"Board(isTerminal=${isTerminal}, stones=${cells.count(_ != Cell.Empty)}, cells=${cells.toList})"
 
   def _rowsOfFour: Seq[Seq[Cell]] =
     for {
