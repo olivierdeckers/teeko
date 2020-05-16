@@ -23,6 +23,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "Teeko",
     scalacOptions ++= Seq(
+      "-Xlint:unused",
       "-Xfatal-warnings"
     ),
   )

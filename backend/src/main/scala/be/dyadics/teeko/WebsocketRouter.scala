@@ -39,10 +39,8 @@ class WebsocketRouter[R <: Clock] {
               case f => Stream.eval_(Task.effect(println(s"unknown type $f")))
             }
             feedbackStream <- room.join(UUID.randomUUID().toString, moves)
-            feedbackFrames = feedbackStream.map {
-              case Left(value) => Text(value.asJson.noSpaces)
-              case Right(value) => Text(value.asJson.noSpaces)
-            }
+            feedbackFrames = feedbackStream
+              .map(f => Text(f.asJson.noSpaces))
             webSocket <- WebSocketBuilder[Task].build(feedbackFrames, queue.enqueue)
           } yield webSocket
       }

@@ -87,20 +87,3 @@ object Main extends App {
     )
 
 }
-
-//object Server extends IOApp {
-//
-//
-//
-//  def run(args: List[String]): IO[ExitCode] = {
-//    implicit val runtime: Runtime[zio.ZEnv] = ZIO.runtime[zio.ZEnv]
-//
-//    BlazeServerBuilder[IO]
-//      .bindHttp(8080, "localhost")
-//      .withHttpApp((websocketRoute <+> new FrontendRouter[IO](Dev).routes).orNotFound)
-//      .serve
-//      .compile
-//      .drain
-//      .as(ExitCode.Success)
-//  }
-//}

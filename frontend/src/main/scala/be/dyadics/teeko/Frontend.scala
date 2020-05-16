@@ -1,6 +1,9 @@
 package be.dyadics.teeko
 
+import be.dyadics.teeko.model.GameState.InvalidMove
 import be.dyadics.teeko.model._
+import be.dyadics.teeko.protocol.Feedback
+import be.dyadics.teeko.protocol.Feedback.{UpdatedGameState, UpdatedRoomState}
 import cats.effect.IO
 import colibri.Observable._
 import colibri.{Observable, Observer}
@@ -73,13 +76,41 @@ object Frontend {
     }
   }
 
+  def renderError(invalidMove: InvalidMove): String =
+    invalidMove match {
+      case GameState.PositionAlreadyTaken => "That position is already taken"
+      case GameState.NotPlayersTurn => "Wait for the other player to move first"
+      case GameState.CannotMovePieceFrom => "You need to select a piece to move first"
+    }
+
   def renderBoard(
       selectedPosition: Handler[Option[Position]],
       gameState: Observable[GameState],
+      roomState: Observable[RoomState],
+      errors: Observable[Option[InvalidMove]],
       commandsObserver: Observer[String]
     ): VNode = {
     table(
       width := "100%",
+      maxWidth := "800px",
+      marginLeft := "auto",
+      marginRight := "auto",
+      tr(
+        td(
+          colSpan := 5,
+          textAlign := "center",
+          h2(
+            errors.map(_.fold("Teeko")(renderError))
+          )
+        )
+      ),
+      tr(
+        td(
+          colSpan := 5,
+          textAlign := "center",
+          h2(roomState.map(s => s"${s.blackScore} - ${s.redScore}"))
+        )
+      ),
       for (row <- 0 to 4)
         yield {
           tr(
@@ -88,7 +119,7 @@ object Frontend {
               td(
                 padding := "5px",
                 selectedPosition.map(s => opacity := (if (s.contains(position)) 0.8 else 1d)),
-                onClick(
+                onPointerUp(
                   gameState
                     .filter(_.board.cell(position) == Cell.Empty)
                     .combineLatest(selectedPosition)
@@ -99,7 +130,7 @@ object Frontend {
                       case Some(value) => value.asJson.noSpaces
                     }
                 ) --> commandsObserver,
-                onClick(
+                onPointerUp(
                   gameState
                     .filter(_.board.cell(position) != Cell.Empty)
                     .combineLatest(selectedPosition)
@@ -120,20 +151,44 @@ object Frontend {
 
     val webSocket = WebSocket(s"ws://${window.location.host}/rooms/room1")
 
-    val gameState = webSocket.observable
+    val feedback = webSocket.observable
       .doOnNext { e => println(e.data) }
       .map(_.data)
-      .map(x => decode[GameState](x.asInstanceOf[String]))
-      .filter(_.isRight)
-      .map(_.right.get)
+      .map(x => decode[Feedback](x.asInstanceOf[String]))
+      .doOnNext {
+        case Left(error) => window.console.error("Could not parse feedback", error)
+        case _ => ()
+      }
+      .collect {
+        case Right(feedback) => feedback
+      }
       .publish
       .refCount
+
+    val gameState = feedback
+      .collect {
+        case UpdatedGameState(state) => state
+      }
+
+    val roomState = feedback
+      .collect {
+        case UpdatedRoomState(roomState) => roomState
+      }
+
+    val errors = feedback
+      .map {
+        case Feedback.InvalidMove(move) => Some(move)
+        case _ => None
+      }
 
     val app = for {
       commandsObserver <- webSocket.observer
       selectedPosition <- Handler.create(Option.empty[Position]).toIO
       result <- OutWatch
-        .renderInto[IO]("#app", renderBoard(selectedPosition, gameState, commandsObserver))
+        .renderInto[IO](
+          "#app",
+          renderBoard(selectedPosition, gameState, roomState, errors, commandsObserver)
+        )
     } yield result
 
     app.unsafeRunSync()

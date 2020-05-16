@@ -17,10 +17,18 @@ case class Board(private val cells: Array[Cell]) {
 
   private def posToIndex(pos: Position) = pos.row * 5 + pos.col
 
-  def isTerminal: Boolean =
-    (_rowsOfFour ++ _colsOfFour ++ _diagonalsOfFour ++ _squaresOfFour).exists(r =>
-      Seq(Seq(Cell.Red), Seq(Cell.Black)).contains(r.distinct)
-    )
+  def isTerminal: Boolean = winner.isDefined
+
+  def winner: Option[Player] =
+    (_rowsOfFour ++ _colsOfFour ++ _diagonalsOfFour ++ _squaresOfFour)
+      .flatMap(r =>
+        r.distinct match {
+          case Seq(Cell.Red) => Some(Player.Red)
+          case Seq(Cell.Black) => Some(Player.Black)
+          case _ => None
+        }
+      )
+      .headOption
 
   override def toString: String =
     s"Board(isTerminal=${isTerminal}, stones=${cells.count(_ != Cell.Empty)}, cells=${cells.toList})"
