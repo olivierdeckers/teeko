@@ -3,7 +3,7 @@ package be.dyadics.teeko
 import be.dyadics.teeko.model.GameState.InvalidMove
 import be.dyadics.teeko.model._
 import be.dyadics.teeko.protocol.Feedback
-import be.dyadics.teeko.protocol.Feedback.{UpdatedGameState, UpdatedRoomState}
+import be.dyadics.teeko.protocol.Feedback.UpdatedRoomState
 import cats.effect.IO
 import colibri.Observable._
 import colibri.{Observable, Observer}
@@ -119,7 +119,7 @@ object Frontend {
               td(
                 padding := "5px",
                 selectedPosition.map(s => opacity := (if (s.contains(position)) 0.8 else 1d)),
-                onPointerUp(
+                onPointerDown(
                   gameState
                     .filter(_.board.cell(position) == Cell.Empty)
                     .combineLatest(selectedPosition)
@@ -130,7 +130,7 @@ object Frontend {
                       case Some(value) => value.asJson.noSpaces
                     }
                 ) --> commandsObserver,
-                onPointerUp(
+                onPointerDown(
                   gameState
                     .filter(_.board.cell(position) != Cell.Empty)
                     .combineLatest(selectedPosition)
@@ -165,15 +165,12 @@ object Frontend {
       .publish
       .refCount
 
-    val gameState = feedback
-      .collect {
-        case UpdatedGameState(state) => state
-      }
-
     val roomState = feedback
       .collect {
         case UpdatedRoomState(roomState) => roomState
       }
+
+    val gameState = roomState.map(_.gameState)
 
     val errors = feedback
       .map {
