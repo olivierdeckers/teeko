@@ -1,5 +1,7 @@
 package be.dyadics.teeko
 
+import java.util.UUID
+
 import cats.effect.Blocker
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.`Content-Type`
@@ -63,7 +65,12 @@ final class FrontendRouter[R](env: Env)(implicit blocker: Blocker, runtime: Runt
     HttpRoutes.of[Task] {
       case req @ GET -> FrontendRouter.assetsDir /: _ =>
         resources.run(req).getOrElseF(notFound)
-      case GET -> Root => Ok(html(env)).map(_.withHeaders(indexHeaders))
+      case req @ GET -> Root =>
+        val requestId =
+          req.cookies.find(_.name == "playerId").fold(UUID.randomUUID().toString)(_.content)
+        Ok(html(env))
+          .map(_.withHeaders(indexHeaders))
+          .map(_.addCookie("playerId", requestId))
     }
 
 }

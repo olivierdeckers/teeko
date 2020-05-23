@@ -26,7 +26,9 @@ class WebsocketRouter[R <: Clock] {
   val routes: Task[HttpRoutes[Task]] =
     TMap.empty[String, Room[Task]].commit.map { rooms =>
       HttpRoutes.of[Task] {
-        case GET -> Root / "rooms" / roomId =>
+        case req @ GET -> Root / "rooms" / roomId =>
+          val playerId =
+            req.cookies.find(_.name == "playerId").fold(UUID.randomUUID().toString)(_.content)
           for {
             roomOpt <- rooms.get(roomId).commit
             room <- roomOpt.fold(Room[Task]())(Task.succeed(_))
@@ -38,7 +40,7 @@ class WebsocketRouter[R <: Clock] {
                 decode[Move](t).fold(e => Stream.eval_(Task.effect(println(e))), Stream(_))
               case f => Stream.eval_(Task.effect(println(s"unknown type $f")))
             }
-            feedbackStream <- room.join(UUID.randomUUID().toString, moves)
+            feedbackStream <- room.join(playerId, moves)
             feedbackFrames = feedbackStream
               .map(f => Text(f.asJson.noSpaces))
             webSocket <- WebSocketBuilder[Task].build(feedbackFrames, queue.enqueue)
