@@ -21,11 +21,14 @@ class RoomTest extends FunSuite {
 
     val player1States = room.join("player1", player1Queue.dequeue).unsafeRunSync()
     val player2States = room.join("player2", player2Queue.dequeue).unsafeRunSync()
+
+    // Wait a bit so everyone can receive the initial state from the topic before we begin playing the moves
+    Thread.sleep(100)
+
     val states = player1States.zip(player2States)
 
     val player1WinsScenario = Seq(
       IO.unit, // initial state of the topic
-      IO.unit, // initial state of the game loop
       player1Queue.offer1(PlacePiece(Position(0, 0))),
       player2Queue.offer1(PlacePiece(Position(1, 0))),
       player1Queue.offer1(PlacePiece(Position(0, 1))),
@@ -39,6 +42,10 @@ class RoomTest extends FunSuite {
       fs2.Stream
         .emits(moves)
         .evalMap(identity)
+        .map(x => {
+          println(x)
+          x
+        })
         .zipRight(states)
         .compile
         .toList
@@ -71,6 +78,12 @@ class RoomTest extends FunSuite {
 
     val moves = fixture.player1WinsScenario :+ IO.unit
     val result = fixture.applyMoves(moves)
+    result.foreach {
+      case (f1, f2) =>
+        println(f1)
+        println(f2)
+        println("")
+    }
 
     val Seq(state) = result.takeRight(1).map(_._1)
     assertEquals(state.asInstanceOf[UpdatedRoomState].roomState, RoomState(0, 1, GameState.initial))

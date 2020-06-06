@@ -34,6 +34,7 @@ object FrontendRouter {
        |  <meta charset="UTF-8">
        |  <title>Teeko</title>
        |  <link rel="shortcut icon" type="image/png" href="$assetsDir/images/favicon.png"/>
+       |  <meta name="viewport" content="width=device-width, initial-scale=1.0">
        |</head>
        |<body>
        |  <div id="app"></div>

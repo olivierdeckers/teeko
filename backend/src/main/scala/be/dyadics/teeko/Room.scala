@@ -78,7 +78,7 @@ object Room {
     ): Stream[F, GameState] =
     commandQueue.dequeue
       .evalScan(GameState.initial) { (state: GameState, command: Command) =>
-        println(s"applying command: $command")
+//        println(s"applying command: $command")
         val newState: Either[Feedback, GameState] = (state, command) match {
           case (s: PlacingGameState, Command(player, PlacePiece(pos))) =>
             s.move(player, pos).left.map(Feedback.InvalidMove)
@@ -114,13 +114,13 @@ object Room {
           case Some(Player.Black) => state.copy(blackScore = state.blackScore + 1)
           case None => state
         }
-        println(s"setting updated gamestate $gameState")
+//        println(s"setting updated gamestate $gameState")
         updatedScore.copy(gameState = gameState)
       }
       .drop(1)
       .changes
       .evalTap(updatedState => {
-        println(s"emitting the updated roomstate $updatedState")
+//        println(s"emitting the updated roomstate $updatedState")
         topic.publish1(UpdatedRoomState(updatedState))
       })
 
